@@ -1,10 +1,9 @@
 ﻿using BepInEx;
 using Menu;
 using Menu.Remix;
-using Menu.Remix.MixedUI;
-using MoreSlugcats;
 using Music;
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace RestartButton
@@ -12,23 +11,15 @@ namespace RestartButton
     [BepInPlugin("ved_s.restartbutton", "Restart Button", "1.0")]
     public class RestartButton : BaseUnityPlugin
     {
-        static SimpleButton? Button;
+        static OpMutedHoldButton? Button;
+        static MenuTabWrapper? TabWrapper;
+        static UIelementWrapper? ButtonWrapper;
+        static PauseMenu? ButtonMenu;
 
         public void OnEnable()
         {
             On.Menu.PauseMenu.SpawnExitContinueButtons += PauseMenu_SpawnExitContinueButtons;
             On.Menu.PauseMenu.SpawnConfirmButtons += PauseMenu_SpawnConfirmButtons;
-            On.Menu.PauseMenu.Singal += PauseMenu_Signal;
-        }
-        
-        private void PauseMenu_Signal(On.Menu.PauseMenu.orig_Singal orig, PauseMenu self, MenuObject sender, string message)
-        {
-            if (message == "RESTART2" && self.game.session is StoryGameSession story)
-            {
-                RestartGame(self.manager, story.saveStateNumber);
-            }
-
-            orig(self, sender, message);
         }
 
         private void PauseMenu_SpawnExitContinueButtons(On.Menu.PauseMenu.orig_SpawnExitContinueButtons orig, PauseMenu self)
@@ -37,21 +28,41 @@ namespace RestartButton
 
             if (self.game.session is StoryGameSession)
             {
-                Button = new(self, self.pages[0], self.Translate("RESTART"), "RESTART2", new Vector2(self.ContinueAndExitButtonsXPos - 460.2f - self.manager.rainWorld.options.SafeScreenOffset.x, Mathf.Max(self.manager.rainWorld.options.SafeScreenOffset.y, 15f)), new Vector2(110f, 30f));
-                self.pages[0].subObjects.Add(Button);
+                TabWrapper = new(self, self.pages[0]);
+                self.pages[0].subObjects.Add(TabWrapper);
+
+                Button = new(new Vector2(self.ContinueAndExitButtonsXPos - 460.2f - self.manager.rainWorld.options.SafeScreenOffset.x, Mathf.Max(self.manager.rainWorld.options.SafeScreenOffset.y, 15f)), new Vector2(110f, 30f), self.Translate("RESTART"));
+                Button.description = " ";
+                Button.OnPressDone += Button_OnPressDone;
+                ButtonWrapper = new(TabWrapper, Button);
+                ButtonMenu = self;
+            }
+        }
+
+        private void Button_OnPressDone(Menu.Remix.MixedUI.UIfocusable trigger)
+        {
+            if (ButtonMenu?.game.session is StoryGameSession story)
+            {
+                RestartGame(ButtonMenu.manager, story.saveStateNumber);
             }
         }
 
         private void PauseMenu_SpawnConfirmButtons(On.Menu.PauseMenu.orig_SpawnConfirmButtons orig, PauseMenu self)
         {
             orig(self);
-            if (Button is not null)
+            if (TabWrapper is not null)
             {
-                self.pages[0].subObjects.Remove(Button);
-                Button?.RemoveSprites();
-                Button = null;
+                self.pages[0].subObjects.Remove(TabWrapper);
+                TabWrapper?.RemoveSprites();
+                TabWrapper = null;
             }
-            
+            if (ButtonWrapper is not null)
+            {
+                ButtonWrapper?.RemoveSprites();
+                ButtonWrapper = null;
+            }
+            Button = null;
+            ButtonMenu = null;
         }
 
         // Mostly a copy of SlugcatSelectMenu.StartGame
@@ -74,7 +85,7 @@ namespace RestartButton
 
             manager.rainWorld.progression.WipeSaveState(name);
             manager.menuSetup.startGameCondition = ProcessManager.MenuSetup.StoryGameInitCondition.New;
-            if ((name != SlugcatStats.Name.White && name != SlugcatStats.Name.Yellow && (!ModManager.MSC || name != MoreSlugcatsEnums.SlugcatStatsName.Saint)) || Input.GetKey("s"))
+            if ((name != SlugcatStats.Name.White && name != SlugcatStats.Name.Yellow && (!ModManager.MSC || name != MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint)) || Input.GetKey("s"))
             {
                 manager.RequestMainProcessSwitch(ProcessManager.ProcessID.Game);
             }
@@ -84,9 +95,9 @@ namespace RestartButton
                 {
                     manager.nextSlideshow = SlideShow.SlideShowID.YellowIntro;
                 }
-                else if (ModManager.MSC && name == MoreSlugcatsEnums.SlugcatStatsName.Saint)
+                else if (ModManager.MSC && name == MoreSlugcats.MoreSlugcatsEnums.SlugcatStatsName.Saint)
                 {
-                    manager.nextSlideshow = MoreSlugcatsEnums.SlideShowID.SaintIntro;
+                    manager.nextSlideshow = MoreSlugcats.MoreSlugcatsEnums.SlideShowID.SaintIntro;
                 }
                 else
                 {
