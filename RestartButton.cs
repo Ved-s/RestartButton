@@ -1,4 +1,5 @@
 ﻿using BepInEx;
+using DevInterface;
 using Menu;
 using Menu.Remix;
 using Music;
@@ -8,46 +9,42 @@ using UnityEngine;
 
 namespace RestartButton
 {
-    [BepInPlugin("ved_s.restartbutton", "Restart Button", "1.1")]
+    [BepInPlugin("ved_s.restartbutton", "Restart Button", "1.2")]
     public class RestartButton : BaseUnityPlugin
     {
         static OpMutedHoldButton? Button;
         static MenuTabWrapper? TabWrapper;
         static UIelementWrapper? ButtonWrapper;
-        static PauseMenu? ButtonMenu;
+        static ProcessManager? Manager;
+        static SlugcatStats.Name? SlugcatName;
 
         public void OnEnable()
         {
             On.Menu.PauseMenu.SpawnExitContinueButtons += PauseMenu_SpawnExitContinueButtons;
             On.Menu.PauseMenu.SpawnConfirmButtons += PauseMenu_SpawnConfirmButtons;
+            On.Menu.SleepAndDeathScreen.GetDataFromGame += SleepAndDeathScreen_GetDataFromGame;
         }
 
-        private void PauseMenu_SpawnExitContinueButtons(On.Menu.PauseMenu.orig_SpawnExitContinueButtons orig, PauseMenu self)
+        private void SleepAndDeathScreen_GetDataFromGame(On.Menu.SleepAndDeathScreen.orig_GetDataFromGame orig, SleepAndDeathScreen self, KarmaLadderScreen.SleepDeathScreenDataPackage package)
+        {
+            orig(self, package);
+
+            if (self.IsDeathScreen)
+            {
+                AddButton(self, self.pages[0], self.manager, package.saveState.saveStateNumber, self.ContinueAndExitButtonsXPos);
+            }
+        }
+
+        private static void PauseMenu_SpawnExitContinueButtons(On.Menu.PauseMenu.orig_SpawnExitContinueButtons orig, PauseMenu self)
         {
             orig(self);
 
-            if (self.game.session is StoryGameSession)
+            if (self.game.session is StoryGameSession story)
             {
-                TabWrapper = new(self, self.pages[0]);
-                self.pages[0].subObjects.Add(TabWrapper);
-
-                Button = new(new Vector2(self.ContinueAndExitButtonsXPos - 460.2f - self.manager.rainWorld.options.SafeScreenOffset.x, Mathf.Max(self.manager.rainWorld.options.SafeScreenOffset.y, 15f)), new Vector2(110f, 30f), self.Translate("RESTART"));
-                Button.description = " ";
-                Button.OnPressDone += Button_OnPressDone;
-                ButtonWrapper = new(TabWrapper, Button);
-                ButtonMenu = self;
+                AddButton(self, self.pages[0], self.manager, story.saveStateNumber, self.ContinueAndExitButtonsXPos);
             }
         }
-
-        private void Button_OnPressDone(Menu.Remix.MixedUI.UIfocusable trigger)
-        {
-            if (ButtonMenu?.game.session is StoryGameSession story)
-            {
-                RestartGame(ButtonMenu.manager, story.saveStateNumber);
-            }
-        }
-
-        private void PauseMenu_SpawnConfirmButtons(On.Menu.PauseMenu.orig_SpawnConfirmButtons orig, PauseMenu self)
+        private static void PauseMenu_SpawnConfirmButtons(On.Menu.PauseMenu.orig_SpawnConfirmButtons orig, PauseMenu self)
         {
             orig(self);
             if (TabWrapper is not null)
@@ -62,7 +59,30 @@ namespace RestartButton
                 ButtonWrapper = null;
             }
             Button = null;
-            ButtonMenu = null;
+            Manager = null;
+            SlugcatName = null;
+        }
+
+        private static void Button_OnPressDone(Menu.Remix.MixedUI.UIfocusable trigger)
+        {
+            if (Manager is not null && SlugcatName is not null)
+            {
+                RestartGame(Manager, SlugcatName);
+            }
+        }
+
+        public static void AddButton(Menu.Menu menu, Menu.Page page, ProcessManager manager, SlugcatStats.Name name, float xpos)
+        {
+            TabWrapper = new(menu, page);
+            page.subObjects.Add(TabWrapper);
+
+            Button = new(new Vector2(xpos - 460.2f - manager.rainWorld.options.SafeScreenOffset.x, Mathf.Max(manager.rainWorld.options.SafeScreenOffset.y, 15f)), new Vector2(110f, 30f), menu.Translate("RESTART"));
+            Button.description = " ";
+            Button.OnPressDone += Button_OnPressDone;
+            ButtonWrapper = new(TabWrapper, Button);
+
+            Manager = manager;
+            SlugcatName = name;
         }
 
         // Mostly a copy of SlugcatSelectMenu.StartGame
