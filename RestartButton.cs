@@ -20,7 +20,7 @@ namespace RestartButton
             On.Menu.PauseMenu.SpawnConfirmButtons += PauseMenu_SpawnConfirmButtons;
             On.Menu.PauseMenu.Singal += PauseMenu_Signal;
         }
-
+        
         private void PauseMenu_Signal(On.Menu.PauseMenu.orig_Singal orig, PauseMenu self, MenuObject sender, string message)
         {
             if (message == "RESTART2" && self.game.session is StoryGameSession story)
