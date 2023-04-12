@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace RestartButton
 {
-    [BepInPlugin("ved_s.restartbutton", "Restart Button", "1.0")]
+    [BepInPlugin("ved_s.restartbutton", "Restart Button", "1.1")]
     public class RestartButton : BaseUnityPlugin
     {
         static OpMutedHoldButton? Button;
