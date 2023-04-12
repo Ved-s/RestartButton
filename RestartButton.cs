@@ -51,6 +51,7 @@ namespace RestartButton
                 Button?.RemoveSprites();
                 Button = null;
             }
+            
         }
 
         // Mostly a copy of SlugcatSelectMenu.StartGame
