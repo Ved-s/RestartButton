@@ -3,7 +3,7 @@
     "name": "Restart Button",
     "authors": "Ved_s",
     "version": "1.0",
-    "description": "",
+    "description": "Adds a restart button to the pause menu.",
     "requirements": [],
     "requirements_names": [],
     "checksum_override_version": false
